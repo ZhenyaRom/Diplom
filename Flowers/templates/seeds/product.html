@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block title %}
+{{ product.name_product }}
+{% endblock %}
+
+{% block content %}
+<h2>{{ product.name_product }}</h2>
+{% if product.product_image %}
+<p><img src='{{ product.product_image.url }}' alt='изображение' width="256" height="256"></p>
+{% endif %}
+<p class="card-text">{{ product.specification_product }}</p>
+<p class="card-text"><strong>{{ product.price }}₽</strong></p>
+<a href="/add_basket/{{ product.name_product|urlencode }}/+/"><button type="submit">Купить</button></a>
+
+{% endblock %}
+{% block pagination %}
+{% endblock %}
