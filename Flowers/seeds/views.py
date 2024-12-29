@@ -200,15 +200,16 @@ def basket_order(request):
     :return: render(request, шаблон home.html в который передаются сообщения о успешном оформлении заказа.
     """
     my_basket = Basket.objects.filter(buyer=user)
+    list_product = []
+    amount_order = 0
+    for paragraph in my_basket:
+        list_product.append((paragraph.product.name_product, paragraph.product.price, paragraph.quantity))
+        amount_order = amount_order + paragraph.product.price * paragraph.quantity
     if request.method == 'POST':
         name_buyer = request.POST.get('name_buyer')
         address_buyer = request.POST.get('address_buyer')
         text_order = request.POST.get('text_order')
-        list_product = []
-        amount_order = 0
-        for paragraph in my_basket:
-            list_product.append((paragraph.product.name_product, paragraph.product.price, paragraph.quantity))
-            amount_order = amount_order + paragraph.product.price * paragraph.quantity
+
         order = Order.objects.create(author_order=user, name_buyer=name_buyer, address_buyer=address_buyer,
                         list_product=list_product, amount_order=amount_order, text_order=text_order)
         my_basket.delete()
@@ -224,9 +225,11 @@ def basket_order(request):
         }
         return render(request, 'seeds/home.html', context)
     else:
+        print(amount_order)
         context = {
             'my_basket': my_basket,
-            'user': user
+            'user': user,
+            'amount_basket': amount_order
         }
         return render(request, 'seeds/basket_order.html', context)
 
@@ -338,3 +341,6 @@ def registry(request):
     return render(request, 'seeds/registry.html', context)
 
 
+def products(request, name_product):
+    product = Product.objects.get(name_product=name_product)
+    return render(request, 'seeds/product.html', {'user': user, 'product': product})

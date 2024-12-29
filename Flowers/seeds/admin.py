@@ -20,9 +20,9 @@ class KindAdmin(admin.ModelAdmin):
 # Для базы данных товаров
 @ admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name_product', 'price', 'kind')
-    search_fields = ('name_product', 'price', 'kind')
-    list_filter = ('name_product', 'price', 'kind')
+    list_display = ('name_product', 'price', 'kind', 'product_image')
+    search_fields = ('name_product', 'price', 'kind', 'product_image')
+    list_filter = ('name_product', 'price', 'kind', 'product_image')
 
 
 # Для базы данных заказов

@@ -41,6 +41,7 @@ class Product(models.Model):
     specification_product = models.TextField(verbose_name='Описание сорта')
     price = models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Цена')
     kind = models.ForeignKey(Kind, on_delete=models.PROTECT, null=True, blank=True, verbose_name='Вид')
+    product_image = models.ImageField(upload_to='images/', null=True, blank=True, verbose_name='Изображение')
 
     def __str__(self):
         return self.name_product
