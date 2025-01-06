@@ -14,5 +14,6 @@ urlpatterns = [
     path('cabinet/<str:question>/', cabinet, name='cabinet'),
     path('contact/', contact_view, name='contact'),
     path('', home, name='home'),  # Главная страница
+    path('result/', result, name='result'),
     ]
 

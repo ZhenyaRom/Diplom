@@ -41,4 +41,8 @@ class PostAdmin(admin.ModelAdmin):
     list_filter = ('name', 'email')
 
 
-
+@ admin.register(Basket)
+class BasketAdmin(admin.ModelAdmin):
+    list_display = ('id', 'buyer', 'product', 'quantity', 'amount_product', 'order',)
+    search_fields = ('id', 'buyer', 'product', 'quantity', 'amount_product', 'order',)
+    list_filter = ('buyer', 'product', 'order',)

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Сводка
+{% endblock %}
+
+{% block content %}
+<h2>Сводка заказов с {{ date_start }} по {{ date_end }}</h2> <!-- Заголовок раздела -->
+    <h3>Товар: {{ select_product }}</h3>
+<br>
+{% if product_bought %}
+    {% for pr in product_bought %}
+        <p>Заказ:{{ pr.order }} от {{ pr.order.date_create_order }} наименование: {{ pr.product }}
+            цена: {{ pr.product.price }}руб. количество: {{ pr.quantity }}шт. итого: {{ pr.amount_product }}руб.</p>
+    {% endfor %}
+    <br>
+    <p>Общий итог: {{ count_product_bought }}шт.  {{ amount_product_bought }}руб.</p>
+{% else %}
+    <p>Заказы отсутствуют</p>
+{% endif %}
+{% endblock %}
+
+{% block pagination %}
+{% endblock %}

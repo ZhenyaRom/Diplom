@@ -19,6 +19,7 @@ from django.urls import include, path
 from django.conf.urls.static import static
 from .settings import MEDIA_URL, MEDIA_ROOT
 
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('seeds.urls')),

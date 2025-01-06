@@ -4,6 +4,7 @@ from django.core.paginator import Paginator
 from django.http import HttpResponseRedirect
 from .forms import ContactForm
 from .models import *
+from django.db.models import Sum, Count
 
 
 user = Buyer.objects.get(id=1)  # технический buyer пока не выполнен вход
@@ -32,7 +33,7 @@ def home(request):
         'post_plus': post_plus,
         'user': user
     }
-    return render(request, 'seeds/home.html', context)  # Переход на главную страницу home.html
+    return render(request, 'seeds/home.html', context)
 
 
 def contact_view(request):
@@ -114,7 +115,7 @@ def cabinet(request, question=''):
             return render(request, 'seeds/cabinet.html', context)
 
 
-def add_basket(request, name_product, mark='+'):  # Функция для добавления товаров в корзину и изменения количества
+def add_basket(request, name_product, mark='+'):
     """
     Функция изменения количества товара в корзине
 
@@ -133,19 +134,21 @@ def add_basket(request, name_product, mark='+'):  # Функция для доб
         context = {'post': post}
         return render(request, 'seeds/home.html', context)
     product = Product.objects.get(name_product=name_product)
-    if Basket.objects.filter(buyer=user, product=product).exists():
-        my_basket = Basket.objects.get(buyer=user, product=product)
+    if Basket.objects.filter(buyer=user, product=product, order=None).exists():
+        my_basket = Basket.objects.get(buyer=user, product=product, order=None)
         if mark == '+':
             my_basket.quantity = my_basket.quantity + 1
+            my_basket.amount_product = product.price * my_basket.quantity
             my_basket.save()
         else:
             if my_basket.quantity == 1:
                 my_basket.delete()
             else:
                 my_basket.quantity = my_basket.quantity - 1
+                my_basket.amount_product = product.price * my_basket.quantity
                 my_basket.save()
     else:
-        Basket.objects.create(buyer=user, product=product, quantity=1)
+        Basket.objects.create(buyer=user, product=product, quantity=1, amount_product=product.price)
     return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
 
 
@@ -199,21 +202,16 @@ def basket_order(request):
     Если пользователем введены данные (name_buyer, address_buyer, text_order), сохраняется объект в таблицу Order.
     :return: render(request, шаблон home.html в который передаются сообщения о успешном оформлении заказа.
     """
-    my_basket = Basket.objects.filter(buyer=user)
-    list_product = []
-    amount_order = 0
-    for paragraph in my_basket:
-        list_product.append((paragraph.product.name_product, paragraph.product.price, paragraph.quantity))
-        amount_order = amount_order + paragraph.product.price * paragraph.quantity
+    my_basket = Basket.objects.filter(buyer=user, order=None)
+    amount_order = my_basket.aggregate(Sum('amount_product'))
     if request.method == 'POST':
         name_buyer = request.POST.get('name_buyer')
         address_buyer = request.POST.get('address_buyer')
         text_order = request.POST.get('text_order')
-
-        order = Order.objects.create(author_order=user, name_buyer=name_buyer, address_buyer=address_buyer,
-                        list_product=list_product, amount_order=amount_order, text_order=text_order)
-        my_basket.delete()
-        post = f'{user}, ваш заказ успешно оформлен. Номер вашего заказа {order}'
+        order_buyer = Order.objects.create(author_order=user, name_buyer=name_buyer, address_buyer=address_buyer,
+                                           amount_order=amount_order['amount_product__sum'], text_order=text_order)
+        my_basket.update(order=order_buyer)
+        post = f'{user}, ваш заказ успешно оформлен. Номер вашего заказа {order_buyer}'
         post_plus = ('В течение трех рабочих дней к вам на электронную почту будет отправлен счет, включающий '
                      'пересылку, который необходимо оплатить. После оплаты напишите нам письмо на email или в обратную'
                      'связь на сайте магазина. В письме укажите сумму и дату платежа. '
@@ -225,11 +223,10 @@ def basket_order(request):
         }
         return render(request, 'seeds/home.html', context)
     else:
-        print(amount_order)
         context = {
             'my_basket': my_basket,
             'user': user,
-            'amount_basket': amount_order
+            'amount_basket': amount_order['amount_product__sum']
         }
         return render(request, 'seeds/basket_order.html', context)
 
@@ -245,12 +242,10 @@ def basket(request):
                                                    my_basket - товары находящиеся в корзине,
                                                    user - покупатель.)
     """
-    my_basket = Basket.objects.filter(buyer=user)
-    amount_basket = 0
-    for paragraph in my_basket:
-        amount_basket += paragraph.product.price * paragraph.quantity
+    my_basket = Basket.objects.filter(buyer=user, order=None)
+    amount_basket = my_basket.aggregate(Sum('amount_product'))
     context = {
-        'amount_basket': amount_basket,
+        'amount_basket': amount_basket['amount_product__sum'],
         'my_basket': my_basket,
         'user': user
     }
@@ -342,5 +337,47 @@ def registry(request):
 
 
 def products(request, name_product):
+    """
+    Функция для вывода карточки товара (фото и описания).
+
+    :param request:
+    :param name_product: наименование продукта из запроса покупателя
+    :return: выбраный продукт
+    """
     product = Product.objects.get(name_product=name_product)
     return render(request, 'seeds/product.html', {'user': user, 'product': product})
+
+
+def result(request):
+    """
+    Функция для просмотра отчета о продажах. Запрашивает интересующий период и наименование товара.
+    :param request:
+    :return: возвращает товары в соответствии с запросом, общее количество, и общую сумму.
+    """
+    if request.method == 'POST':
+        date_start = request.POST.get('date_start')
+        date_end = request.POST.get('date_end')
+        select_product = request.POST.get('select_product')
+        if select_product != 'все товары':
+            product = Product.objects.get(name_product=select_product)
+            product_bought = Basket.objects.filter(product=product, order__isnull=False,
+                                                   order__date_create_order__range=(date_start, date_end))
+        else:
+            product_bought = Basket.objects.filter(order__isnull=False,
+                                                   order__date_create_order__range=(date_start, date_end))
+        stats = product_bought.aggregate(
+            amount_product_bought=Sum('amount_product'),
+            count_product_bought=Sum('quantity')
+        )
+        context = {
+            'product_bought': product_bought,
+            'date_start': date_start,
+            'date_end': date_end,
+            'select_product': select_product,
+            'amount_product_bought': stats['amount_product_bought'],
+            'count_product_bought': stats['count_product_bought']
+        }
+        return render(request, 'seeds/result_message.html', context)
+    else:
+        prod = Product.objects.all()
+        return render(request, 'seeds/result.html', {'user': user, 'products': prod})

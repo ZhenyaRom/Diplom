@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Сводка
+{% endblock %}
+
+{% block content %}
+<form method="post">
+    {% csrf_token %}
+        <ul>
+            <li>
+                <label for="date_start">Введите начальную дату</label>
+                <input type="date" id="date_start" name="date_start" required>
+            </li>
+            <br>
+            <li>
+                <label for="date_end">Введите конечную дату</label>
+                <input type="date" id="date_end" name="date_end" required>
+            </li>
+            <br>
+        </ul>
+
+        <label for="select_product">Товар:</label>
+        <select name="select_product" id="select_product" style="font-size: inherit;">
+            <option>все товары</option>
+            {% for product in products %}
+                <option>{{ product.name_product }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" >Применить</button>
+</form>
+{% endblock %}
+
+{% block pagination %}
+    {{ block.super }}
+{% endblock %}
